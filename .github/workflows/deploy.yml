@@ -1,0 +1,55 @@
+name: Deploy
+on:
+    # workflow_run:
+    #     workflows:
+    #         - ci.yml
+    #     types:
+    #         - completed
+    push:
+        branches:
+            - feat/deploy-app
+
+jobs:
+    deploy-app:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Google Cloud Authentication
+              uses: google-github-actions/auth@v2
+              with:
+                credentials_json: ${{ secrets.GCP_SA_KEY_GKE }}
+
+            - name: Google Cloud SDK setup
+              uses: google-github-actions/setup-gcloud@v2
+              with:
+                project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+            - name: Get GKE credentials        
+              uses: 'google-github-actions/get-gke-credentials@v2'
+              with:
+                  cluster_name: ${{ secrets.GKE_CLUSTER_NAME }}
+                  location: ${{ secrets.GCP_REGION }}
+
+            - name: Helm Install
+              run: |
+                curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+            - name: Deploy Application Manifests
+              working-directory: ./k8s
+              run: |
+                kubectl apply -f deployment.yml
+                kubectl apply -f service.yml
+                kubectl apply -f ingress.yaml
+                kubectl apply -f service-monitor.yaml
+
+            - name: Deploy Monitoring Stack with Helm
+              run: |
+                helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+                helm repo update
+                helm upgrade --install prometheus-stack prometheus-community/kube-prometheus-stack \
+                    --namespace monitoring \
+                    --create-namespace \
+                    --set grafana.service.type=LoadBalancer \
+                    --set prometheus.service.type=LoadBalancer
