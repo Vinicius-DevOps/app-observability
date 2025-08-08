@@ -5,7 +5,7 @@ terraform {
       version = "6.46.0"
     }
   }
-  
+
   backend "s3" {
     bucket       = "placeholder"
     key          = "placeholder"
