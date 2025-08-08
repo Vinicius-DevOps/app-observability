@@ -1,8 +1,3 @@
-# Global
-region      = "us-central1"
-environment = "staging"
-project_id  = "iconic-ruler-461814-q4"
-
 # VPC
 subnet_cidr   = "10.0.0.0/24"
 pods_cidr     = "10.1.0.0/16"
