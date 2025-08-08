@@ -1,0 +1,85 @@
+name: Infra Deployment
+on:
+    workflow_dispatch:
+        inputs:
+            environment:
+                description: The environment to deploy
+                type: choice
+                required: true
+                options:
+                    - staging
+                    - production
+            action:
+                description: The terraform action
+                type: choice
+                required: true
+                options:
+                    - deploy
+                    - destroy
+jobs:
+    infra:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Google Cloud Authentication
+              uses: google-github-actions/auth@v2
+              with:
+                credentials_json: ${{ secrets.GCP_SA_KEY_GKE }}
+
+            - name: Set Up AWS Credentials
+              uses: aws-actions/configure-aws-credentials@v4.1.0
+              with:
+                aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+                aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+                aws-region: ${{ secrets.AWS_REGION }}
+
+            - name: Set up Terraform
+              uses: hashicorp/setup-terraform@v2
+            
+            - name: Initialize Terraform
+              working-directory: ./infra
+              run: |
+                terraform init \
+                    -backend-config="bucket=${{ secrets.AWS_S3_BUCKET }}" \
+                    -backend-config="key=envs/${{ github.event.inputs.environment }}/terraform.tfstate" \
+                    -backend-config="region=${{ secrets.AWS_REGION }}" \
+                    -backend-config="encrypt=true" \
+                    -backend-config="use_lockfile=true"
+
+            - name: Terraform Format
+              working-directory: ./infra
+              run: terraform fmt -check -recursive
+
+            - name: Terraform Plan
+              if: github.event.inputs.action == 'deploy'
+              working-directory: ./infra
+              run: |
+                terraform plan -out=plan.out \
+                    -var="project_id=${{ secrets.GCP_PROJECT_ID }}" \
+                    -var="environment=${{ github.event.inputs.environment }}" \
+                    -var="region=${{ secrets.GCP_REGION }}" \
+                    -var-file="envs/${{ github.event.inputs.environment }}/terraform.tfvars"
+
+            - name: Terraform Plan Destroy
+              if: github.event.inputs.action == 'destroy'
+              working-directory: ./infra
+              run: |
+                terraform plan -destroy -out=destroy-plan.out \
+                    -var="project_id=${{ secrets.GCP_PROJECT_ID }}" \
+                    -var="environment=${{ github.event.inputs.environment }}" \
+                    -var="region=${{ secrets.GCP_REGION }}" \
+                    -var-file="envs/${{ github.event.inputs.environment }}/terraform.tfvars"
+
+            - name: Terraform Apply
+              if: github.event.inputs.action == 'deploy'
+              working-directory: ./infra
+              run: |
+                terraform apply -auto-approve plan.out
+
+            - name: Terraform Destroy
+              if: github.event.inputs.action == 'destroy'
+              working-directory: ./infra
+              run: |
+                terraform apply -auto-approve destroy-plan.out
