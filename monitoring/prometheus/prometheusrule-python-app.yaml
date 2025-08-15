@@ -1,0 +1,60 @@
+apiVersion: monitoring.coreos.com/v1           # (1) API do CRD "PrometheusRule" gerenciado pelo Prometheus Operator
+kind: PrometheusRule                            # (2) Tipo do recurso: conjunto de regras de alerta/rules para o Prometheus
+metadata:                                       # (3) Metadados padrão do Kubernetes
+  name: python-app-rules                        # (4) Nome deste objeto (livre, mas descritivo)
+  namespace: monitoring                         # (5) Namespace onde a regra será criada (costuma ser o mesmo da stack)
+  labels:                                       # (6) Rótulos que ajudam o Operator/Prometheus a selecionar esta regra
+    release: my-kube-prometheus-stack                                # (7) ESSENCIAL: precisa casar com a release Helm (ex.: "kps") para ser carregada
+    team: observability                         # (8) Rótulo livre (útil para filtros/organização)
+spec:                                           # (9) Especificação das regras propriamente ditas
+  groups:                                       # (10) "Groups" organizam um conjunto de regras por nome
+    - name: python-app.general                  # (11) Nome do grupo de regras (apenas organizacional)
+      rules:                                    # (12) Lista de regras/alertas dentro deste grupo
+
+        # ------------------ Regra 1: Watchdog (sempre ativa) ------------------
+        - alert: Watchdog                       # (13) Nome do alerta (label "alertname" que o AM vai receber)
+          expr: vector(1)                       # (14) Expressão PromQL: "sempre verdadeiro" (gera 1 série constante)
+          for: 0m                               # (15) Tempo que a condição deve permanecer verdadeira antes de "firing" (aqui, imediato)
+          labels:                               # (16) Labels extras que seguem com o alerta (para roteamento/agrupamento)
+            severity: "none"                    # (17) Severidade "none" para não paginar (só validar o pipeline)
+            app: "app-observability"            # (18) Identifica sua aplicação (ajuda no roteamento/agrupamento)
+            namespace: "default"                # (19) Namespace da aplicação (contexto útil)
+          annotations:                          # (20) Anotações: texto para humanos (sumário, descrição, links)
+            summary: "Watchdog - validação do pipeline de alertas"   # (21) Título resumido mostrado no AM/UI
+            description: >                      # (22) Texto mais longo explicando o propósito deste alerta
+              Alerta propositalmente sempre ativo para verificar o fluxo
+              Prometheus → Alertmanager → (receivers). Não deve acionar paginação.
+
+        # ----------- Regra 2: AppDown (sem scrape do /metrics) ---------------
+        - alert: PythonAppDown                  # (23) Nome do alerta de indisponibilidade da app
+          expr: (up{service="srv-monitoring",namespace="default"} == 0) or absent(up{service="srv-monitoring",namespace="default"})   # (24) PromQL: "up==0" indica que o scrape falhou (alvo DOWN)
+          for: 1m                               # (25) Condição precisa durar 1 minutos antes de virar "firing"
+          labels:                               # (26) Labels para roteamento/prioridade
+            severity: "critical"                # (27) Severidade crítica (aplicações essenciais normalmente usam "critical")
+            app: "app-observability"            # (28) Mesmo contexto do alerta acima
+            namespace: "default"                # (29) Idem
+          annotations:                          # (30) Mensagens humanas
+            summary: "Aplicação fora do ar: {{ $labels.service }} (ns: {{ $labels.namespace }})"   # (31) Título com templates
+            description: >                      # (32) Explicação do gatilho do alerta
+              O endpoint /metrics da aplicação não está sendo coletado (up==0)
+              há pelo menos 1 minutos. Verifique o Service, Endpoints e logs do Pod.
+            # runbook_url: "https://seu-runbook/indisponibilidade"  # (33) (Opcional) Link para procedimento de resolução
+
+        # ----- Regra 3: Latência p95 alta (usando seu histograma de requisições) -----
+        - alert: PythonAppP95LatencyHigh        # (34) Nome do alerta para latência elevada
+          expr: |                               # (35) Expressão PromQL multilinha para claridade
+            histogram_quantile(
+              0.95,                             
+              sum(rate(http_request_duration_seconds_bucket{namespace="default",service="srv-monitoring"}[5m])) by (le)
+            ) > 0.5   
+          for: 5m                               # (38) Exigir 5 min sustentados de p95 alto antes do firing
+          labels:                               # (39) Labels de roteamento
+            severity: "warning"                 # (40) "warning" (geralmente não pagina; envia para canal de time)
+            app: "app-observability"                   # (41) Contexto
+            namespace: "default"                    # (42) Contexto
+          annotations:                          # (43) Mensagens humanas
+            summary: "Latência p95 alta (>500ms) na python-app"    # (44) Resumo
+            description: >                      # (45) Detalhes + dica
+              A latência p95 das requisições HTTP excedeu 500ms por 5 minutos.
+              Avalie carga, latência de dependências e uso de CPU/memória do Pod.
+            # runbook_url: "https://seu-runbook/latencia"          # (46) (Opcional) Guia de resposta a incidentes
