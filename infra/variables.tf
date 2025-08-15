@@ -61,5 +61,5 @@ variable "max_node_count" {
 variable "grafana_password" {
   description = "Admin password for Grafana."
   type        = string
-  sensitive = true
+  sensitive   = true
 }
