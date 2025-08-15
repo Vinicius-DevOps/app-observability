@@ -14,6 +14,8 @@ on:
 jobs:
     deploy-app:
         runs-on: ubuntu-latest
+        outputs:
+            tag: ${{ steps.tag.outputs.TAG }}
         steps:
             - name: Checkout code
               uses: actions/checkout@v4
@@ -34,6 +36,10 @@ jobs:
                   cluster_name: ${{ secrets.GKE_CLUSTER_NAME }}
                   location: ${{ secrets.GCP_REGION }}
 
+            - name: Image tag definition
+              id: tag
+              run: |
+                echo "TAG=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
 
             - name: Deploy Application Manifests
               working-directory: ./k8s
@@ -41,7 +47,7 @@ jobs:
                 GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
                 GCP_REGION: ${{ secrets.GCP_REGION }}
                 GCP_ARTIFACT_REPO: ${{ secrets.GCP_ARTIFACT_REPO }}
-                IMAGE_TAG: ${{ github.sha }}
+                IMAGE_TAG: ${{ steps.tag.outputs.TAG }}
               run: |
                 envsubst < deployment.yaml | kubectl apply -f -
                 kubectl apply -f service-app.yaml
@@ -52,6 +58,9 @@ jobs:
               working-directory: ./monitoring/prometheus
               run: |
                 kubectl apply -f service-monitor.yaml
+
+            - name: Deploy Prometheus Rule for Python App
+              run: |
                 kubectl wait --for=condition=available --timeout=90s deployment/svc-monitor -n monitoring
                 kubectl apply -f prometheusrule-python-app.yaml
 
