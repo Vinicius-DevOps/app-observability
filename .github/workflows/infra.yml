@@ -60,6 +60,7 @@ jobs:
                     -var="project_id=${{ secrets.GCP_PROJECT_ID }}" \
                     -var="environment=${{ github.event.inputs.environment }}" \
                     -var="region=${{ secrets.GCP_REGION }}" \
+                    -var="grafana_password=${{ secrets.GRAFANA_PASSWORD }}" \
                     -var-file="envs/${{ github.event.inputs.environment }}/terraform.tfvars"
 
             - name: Terraform Plan Destroy
@@ -70,6 +71,7 @@ jobs:
                     -var="project_id=${{ secrets.GCP_PROJECT_ID }}" \
                     -var="environment=${{ github.event.inputs.environment }}" \
                     -var="region=${{ secrets.GCP_REGION }}" \
+                    -var="grafana_password=${{ secrets.GRAFANA_PASSWORD }}" \
                     -var-file="envs/${{ github.event.inputs.environment }}/terraform.tfvars"
 
             - name: Terraform Apply
