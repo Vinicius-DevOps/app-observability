@@ -22,3 +22,20 @@ module "gke" {
   min_node_count    = var.min_node_count
   max_node_count    = var.max_node_count
 }
+
+resource "google_secret_manager_secret" "grafana_admin_password" {
+  secret_id = "grafana-admin-password"
+
+  labels = {
+    environment = var.environment
+  }
+
+  replication {
+    auto {}
+  }
+}
+
+resource "google_secret_manager_secret_version" "secret-version-base64" {
+  secret      = google_secret_manager_secret.grafana_admin_password.id
+  secret_data = var.grafana_password
+}
