@@ -1,0 +1,32 @@
+alertmanager:
+  enabled: true
+  alertmanagerSpec:
+    # Alertmanager vai buscar AlertmanagerConfigs com este label...
+    alertmanagerConfigSelector:
+      matchLabels:
+        managed-by: my-kube-prometheus-stack
+    # ...em todos os namespaces (ou restrinja com matchNames/matchLabels)
+    alertmanagerConfigNamespaceSelector: {}
+  # (opcional) uma rota/receiver "default" mínima, caso nenhum AMConfig case
+  config:
+    global:
+      resolve_timeout: 5m
+    route:
+      receiver: default
+      group_by: ['alertname','namespace','service']
+      group_wait: 10s
+      group_interval: 1m
+      repeat_interval: 1h
+      routes:
+        - matchers:
+            - alertname = "Watchdog"
+          receiver: "null"  # (opcional) descarta alertas "Watchdog
+    receivers:
+      - name: default
+      - name: "null"  # (opcional) receiver "null" para descartar alertas não roteados
+
+
+grafana:
+  enabled: true
+  admin:
+    existingSecret: grafana-auth-secret

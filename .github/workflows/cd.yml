@@ -1,0 +1,68 @@
+name: Deploy
+on:
+    workflow_run:
+        workflows:
+            - ci.yml
+        types:
+            - completed
+    # push:
+    #     branches:
+    #         - feat/deploy-app
+
+jobs:
+    deploy-app:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Google Cloud Authentication
+              uses: google-github-actions/auth@v2
+              with:
+                credentials_json: ${{ secrets.GCP_SA_KEY_GKE }}
+
+            - name: Google Cloud SDK setup
+              uses: google-github-actions/setup-gcloud@v2
+              with:
+                project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+            - name: Get GKE credentials        
+              uses: 'google-github-actions/get-gke-credentials@v2'
+              with:
+                  cluster_name: ${{ secrets.GKE_CLUSTER_NAME }}
+                  location: ${{ secrets.GCP_REGION }}
+
+
+            - name: Deploy Application Manifests
+              working-directory: ./k8s
+              run: |
+                kubectl apply -f deployment.yaml
+                kubectl apply -f service-app.yaml
+                kubectl apply -f ingress.yaml
+                kubectl apply -f service-observ.yaml
+
+            - name: Deploy Service Monitor and Prometheus Rule
+              working-directory: ./monitoring/prometheus
+              run: |
+                kubectl apply -f service-monitor.yaml
+                kubectl wait --for=condition=available --timeout=90s deployment/svc-monitor -n monitoring
+                kubectl apply -f prometheusrule-python-app.yaml
+
+            - name: Upgrade helm chart for Alertmanager and Grafana
+              working-directory: ./monitoring
+              run: |
+                helm upgrade --install my-kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+                  -n monitoring -f values.yaml
+
+            - name: AlertmanagerConfig Deploy
+              working-directory: ./monitoring/alertmanager
+              run: |
+                kubectl apply -f alertmanagerconfig-webhook.yaml
+
+            - name: SecretStore and ExternalSecret Deploy
+              working-directory: ./monitoring/grafana
+              env:
+                GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+              run: |
+                envsubst < secret-store.yaml | kubectl apply -f -
+                kubectl apply -f external-secret-grafana.yaml

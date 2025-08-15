@@ -56,3 +56,10 @@ variable "max_node_count" {
   description = "Maximum number of nodes"
   type        = number
 }
+
+# Grafana
+variable "grafana_password" {
+  description = "Admin password for Grafana."
+  type        = string
+  sensitive = true
+}

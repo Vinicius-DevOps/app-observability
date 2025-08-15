@@ -1,0 +1,66 @@
+apiVersion: monitoring.coreos.com/v1alpha1
+kind: AlertmanagerConfig
+metadata:
+  name: slack-routing
+  namespace: default                             # <<< igual ao namespace dos alertas
+  labels:
+    managed-by: my-kube-prometheus-stack         # <<< precisa bater com o selector do AM
+spec:
+  # Rota raiz deste AMConfig (vale para namespace="default")
+  route:
+    receiver: drop-others                        # default: descarta o que não casar
+    groupBy: ['alertname','namespace','service']
+    groupWait: 10s
+    groupInterval: 1m
+    repeatInterval: 1h
+    routes:
+      # critical -> Slack crítico
+      - receiver: slack-critical
+        matchers:
+          - name: severity
+            value: critical
+      # warning -> Slack warning
+      - receiver: slack-warning
+        matchers:
+          - name: severity
+            value: warning
+
+  receivers:
+    # Receiver p/ CRITICAL
+    - name: slack-critical
+      slackConfigs:
+        - apiURL:                                 # pega do Secret
+            name: slack-webhooks
+            key: critical_url
+          sendResolved: true
+          # channel: '#seu-canal-critico'         # opcional: override; se não usar, vai pro canal do webhook
+          title: >-
+            [{{ .Status | toUpper }}] {{ .CommonLabels.alertname }} — {{ .CommonLabels.namespace }}
+          text: >-
+            *Severity*: {{ .CommonLabels.severity }}
+            *App*: {{ if .CommonLabels.app }}{{ .CommonLabels.app }}{{ else }}-{{ end }}
+            *Summary*: {{ if .CommonAnnotations.summary }}{{ .CommonAnnotations.summary }}{{ else }}-{{ end }}
+            *Description*: {{ if .CommonAnnotations.description }}{{ .CommonAnnotations.description }}{{ else }}-{{ end }}
+            *Link*: <{{ .ExternalURL }}|Alertmanager>
+          color: '{{ if eq .Status "firing" }}danger{{ else }}good{{ end }}'
+
+    # Receiver p/ WARNING
+    - name: slack-warning
+      slackConfigs:
+        - apiURL:
+            name: slack-webhooks
+            key: warning_url
+          sendResolved: true
+          # channel: '#seu-canal-warning'         # opcional: override
+          title: >-
+            [{{ .Status | toUpper }}] {{ .CommonLabels.alertname }} — {{ .CommonLabels.namespace }}
+          text: >-
+            *Severity*: {{ .CommonLabels.severity }}
+            *App*: {{ if .CommonLabels.app }}{{ .CommonLabels.app }}{{ else }}-{{ end }}
+            *Summary*: {{ if .CommonAnnotations.summary }}{{ .CommonAnnotations.summary }}{{ else }}-{{ end }}
+            *Description*: {{ if .CommonAnnotations.description }}{{ .CommonAnnotations.description }}{{ else }}-{{ end }}
+            *Link*: <{{ .ExternalURL }}|Alertmanager>
+          color: '{{ if eq .Status "firing" }}warning{{ else }}good{{ end }}'
+
+    # Receiver "lixeira" (evita ruído do que não casou)
+    - name: drop-others
