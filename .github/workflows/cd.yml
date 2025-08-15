@@ -1,7 +1,7 @@
 name: Deploy
 on:
   workflow_run:
-    workflows: ["Build, Test and Push"]  # <- nome exato do CI
+    workflows: [Build Test and Push]  # <- nome exato do CI
     branches:
       - main
       - staging
