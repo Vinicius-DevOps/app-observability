@@ -1,10 +1,12 @@
 name: Deploy
 on:
-    workflow_run:
-        workflows:
-            - ci.yml
-        types:
-            - completed
+  workflow_run:
+    workflows: [Build Test and Push]  # <- nome exato do CI
+    branches:
+      - main
+      - staging
+    types: completed
+
     # push:
     #     branches:
     #         - feat/deploy-app
@@ -35,8 +37,13 @@ jobs:
 
             - name: Deploy Application Manifests
               working-directory: ./k8s
+              env:
+                GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+                GCP_REGION: ${{ secrets.GCP_REGION }}
+                GCP_ARTIFACT_REPO: ${{ secrets.GCP_ARTIFACT_REPO }}
+                IMAGE_TAG: ${{ github.sha }}
               run: |
-                kubectl apply -f deployment.yaml
+                envsubst < deployment.yaml | kubectl apply -f -
                 kubectl apply -f service-app.yaml
                 kubectl apply -f ingress.yaml
                 kubectl apply -f service-observ.yaml

@@ -18,7 +18,7 @@ spec:
     spec:
       containers:
         - name: app
-          image:  vinny6202/app-observability:v1
+          image:  docker push "$GCP_REGION"-docker.pkg.dev/"$GCP_PROJECT_ID"/"$GCP_ARTIFACT_REPO"/app-observability:"$IMAGE_TAG"
           ports:
           - name:  http
             containerPort:  8000
