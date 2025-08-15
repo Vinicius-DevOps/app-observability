@@ -61,7 +61,7 @@ jobs:
 
             - name: Deploy Prometheus Rule for Python App
               run: |
-                kubectl wait --for=condition=available --timeout=90s deployment/svc-monitor -n monitoring
+                kubectl -n monitoring wait --for=condition=available --timeout=90s servicemonitor/svc-monitor
                 kubectl apply -f prometheusrule-python-app.yaml
 
             - name: Upgrade helm chart for Alertmanager and Grafana
