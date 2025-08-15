@@ -1,10 +1,9 @@
 name: Deploy
 on:
-    workflow_run:
-        workflows:
-            - ci.yml
-        types:
-            - completed
+  workflow_run:
+    workflows: ["Build, Test and Push"]  # <- nome exato do CI
+    types: [completed]
+    
     # push:
     #     branches:
     #         - feat/deploy-app
