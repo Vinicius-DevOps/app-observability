@@ -67,7 +67,7 @@ jobs:
             - name: Upgrade helm chart for Alertmanager and Grafana
               working-directory: ./monitoring
               run: |
-                helm upgrade --install my-kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+                helm upgrade --install my-kube-prometheus-stack prometheus-community/kube-prometheus-stack --version 76.3.0 \
                   -n monitoring -f values.yaml
 
             - name: AlertmanagerConfig Deploy
