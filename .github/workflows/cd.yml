@@ -93,15 +93,6 @@ jobs:
                   crd/clustersecretstores.external-secrets.io \
                   crd/externalsecrets.external-secrets.io
 
-            - name: SecretStore and ExternalSecret Deploy
-              working-directory: ./monitoring/grafana
-              env:
-                GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-              run: |
-                envsubst < secret-store.yaml | kubectl apply -f -
-                kubectl apply -f external-secret-grafana.yaml -n 
-
-
             - name: Mostra em qual cluster o runner está mexendo
               run: |
                 kubectl config current-context
@@ -113,3 +104,12 @@ jobs:
                 kubectl get crd | grep external-secrets || true
                 kubectl api-resources | grep -i external-secrets || true
                 kubectl get crd secretstores.external-secrets.io -o jsonpath='{.spec.versions[*].name}{"\n"}' || true
+
+
+            - name: SecretStore and ExternalSecret Deploy
+              working-directory: ./monitoring/grafana
+              env:
+                GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+              run: |
+                envsubst < secret-store.yaml | kubectl apply -f -
+                kubectl apply -f external-secret-grafana.yaml -n 
