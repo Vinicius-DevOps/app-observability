@@ -7,10 +7,6 @@ on:
       - staging
     types: completed
 
-    # push:
-    #     branches:
-    #         - feat/deploy-app
-
 jobs:
     deploy-app:
         runs-on: ubuntu-latest
@@ -61,7 +57,6 @@ jobs:
 
             - name: Deploy Prometheus Rule for Python App
               run: |
-                kubectl -n monitoring wait --for=condition=available --timeout=90s servicemonitor/svc-monitor
                 kubectl apply -f prometheusrule-python-app.yaml
 
             - name: Upgrade helm chart for Alertmanager and Grafana
