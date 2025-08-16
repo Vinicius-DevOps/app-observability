@@ -77,10 +77,38 @@ jobs:
               run: |
                 kubectl apply -f alertmanagerconfig-webhook.yaml
 
+            - name: External Secrets Operator (ESO) Install
+              run: |
+                helm repo add external-secrets https://charts.external-secrets.io
+                helm repo update
+                helm upgrade --install external-secrets external-secrets/external-secrets \
+                  -n external-secrets --create-namespace
+                  --set installCRDs=true
+
+            - name: Agurda os CRDs ficarem disponiveis
+              run: |
+                kubectl wait --for=condition=Established --timeout=180s \
+                  crd/secretstores.external-secrets.io \
+                  crd/clustersecretstores.external-secrets.io \
+                  crd/externalsecrets.external-secrets.io
+
             - name: SecretStore and ExternalSecret Deploy
               working-directory: ./monitoring/grafana
               env:
                 GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
               run: |
                 envsubst < secret-store.yaml | kubectl apply -f -
-                kubectl apply -f external-secret-grafana.yaml
+                kubectl apply -f external-secret-grafana.yaml -n 
+
+
+            - name: Mostra em qual cluster o runner está mexendo
+              run: |
+                kubectl config current-context
+                kubectl cluster-info
+
+
+            - name: Confere se os CRDs existem e a versão do apiVersion
+              run: |
+                kubectl get crd | grep external-secrets || true
+                kubectl api-resources | grep -i external-secrets || true
+                kubectl get crd secretstores.external-secrets.io -o jsonpath='{.spec.versions[*].name}{"\n"}' || true
