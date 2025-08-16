@@ -32,6 +32,10 @@ jobs:
                   cluster_name: ${{ secrets.GKE_CLUSTER_NAME }}
                   location: ${{ secrets.GCP_REGION }}
 
+            - name: Helm Install
+              run: |
+                curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
             - name: Image tag definition
               id: tag
               run: |
