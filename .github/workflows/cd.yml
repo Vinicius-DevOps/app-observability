@@ -105,6 +105,7 @@ jobs:
                 kubectl api-resources | grep -i external-secrets || true
                 kubectl get crd secretstores.external-secrets.io -o jsonpath='{.spec.versions[*].name}{"\n"}' || true
 
+
             - name: SecretStore and ExternalSecret Deploy
               working-directory: ./monitoring/grafana
               env:
@@ -112,5 +113,3 @@ jobs:
               run: |
                 envsubst < secret-store.yaml | kubectl apply -f -
                 kubectl apply -f external-secret-grafana.yaml -n 
-
-
