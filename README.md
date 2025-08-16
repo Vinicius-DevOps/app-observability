@@ -1,1 +1,1 @@
-# app-observabilit
+# app-observability
