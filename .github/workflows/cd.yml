@@ -67,6 +67,8 @@ jobs:
             - name: Upgrade helm chart for Alertmanager and Grafana
               working-directory: ./monitoring
               run: |
+                helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+                helm repo update
                 helm upgrade --install my-kube-prometheus-stack prometheus-community/kube-prometheus-stack --version 76.3.0 \
                   -n monitoring -f values.yaml
 
