@@ -56,6 +56,7 @@ jobs:
                 kubectl apply -f service-monitor.yaml
 
             - name: Deploy Prometheus Rule for Python App
+              working-directory: ./monitoring/prometheus
               run: |
                 kubectl apply -f prometheusrule-python-app.yaml
 
