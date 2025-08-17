@@ -81,10 +81,11 @@ jobs:
               run: |
                 helm repo add external-secrets https://charts.external-secrets.io
                 helm repo update
-                helm upgrade --install external-secrets external-secrets/external-secrets \
-                  --namespace external-secrets \
-                  --create-namespace \
-                  --set installCRDs=true
+                helm install external-secrets \
+                  external-secrets/external-secrets \
+                    -n external-secrets \
+                    --create-namespace \
+                    --set installCRDs=true
 
             - name: Agurda os CRDs ficarem disponiveis
               run: |
@@ -110,6 +111,7 @@ jobs:
               working-directory: ./monitoring/grafana
               env:
                 GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+                GCP_SA_KEY_GKE: ${{ secrets.GCP_SA_KEY_GKE }}
               run: |
                 envsubst < secret-store.yaml | kubectl apply -f -
                 kubectl apply -f external-secret-grafana.yaml -n 
