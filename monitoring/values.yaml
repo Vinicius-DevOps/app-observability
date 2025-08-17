@@ -24,9 +24,3 @@ alertmanager:
     receivers:
       - name: default
       - name: "null"  # (opcional) receiver "null" para descartar alertas não roteados
-
-
-grafana:
-  enabled: true
-  admin:
-    existingSecret: grafana-auth-secret
