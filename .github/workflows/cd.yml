@@ -64,6 +64,12 @@ jobs:
               run: |
                 kubectl apply -f prometheusrule-python-app.yaml
 
+            - name: Create Secret for Slack Webhook URL
+              run: |
+                kubectl -n default create secret generic slack-webhooks \
+                  --from-literal=critical_url=${{ secrets.CRITICAL_URL }} \
+                  --from-literal=warning_url=${{ secrets.WARNING_URL }} \
+
             - name: Upgrade helm chart for Alertmanager and Grafana
               working-directory: ./monitoring
               run: |
